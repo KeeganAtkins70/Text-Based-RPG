@@ -1,0 +1,307 @@
+#include<iostream>
+#include<string>
+#include<cstdlib>
+#include<ctime>
+#include<limits>
+
+using namespace std;
+
+class Player {
+public:
+    string name;
+    string characterClass;
+    int health;
+    int maxHealth;  // Store the maximum health
+    int attack;
+    int defense;
+    int level;
+    int experience;
+    int xpToNextLevel;
+
+    // Constructor with attack and defense parameters
+    Player(string n, string c, int att = 10, int def = 5)
+        : name(n), characterClass(c), health(100), maxHealth(100), attack(att), defense(def), level(1), experience(0), xpToNextLevel(100) {}
+
+    void displayStats() {
+        cout << "Name: " << name << endl;
+        cout << "Class: " << characterClass << endl;
+        cout << "Level: " << level << endl;
+        cout << "Health: " << health << " / " << maxHealth << endl;
+        cout << "Attack: " << attack << endl;
+        cout << "Defense: " << defense << endl;
+        cout << "Experience: " << experience << " / " << xpToNextLevel << endl;
+    }
+
+    // Function to level up the player
+    void levelUp() {
+        if (experience >= xpToNextLevel) {
+            level++;
+            experience -= xpToNextLevel;  // Reset XP after leveling up
+            xpToNextLevel = level * 100;  // Increase the XP required for the next level
+
+            // Improve stats with each level-up
+            maxHealth += 10;
+            attack += 2;
+            defense += 1;
+
+            cout << "Congratulations! You leveled up to level " << level << "!" << endl;
+        }
+    }
+
+    // Function to award experience points
+    void earnXP(int xp) {
+        experience += xp;
+        cout << "You earned " << xp << " XP!" << endl;
+        levelUp();  // Check if the player should level up after gaining XP
+    }
+
+    // Function to reset player's health after combat to max health
+    void resetHealth() {
+        health = maxHealth;  // Reset health to max health (which changes with level)
+    }
+
+    // Function to restore health manually
+    void restoreHealth() {
+        health = maxHealth;  // Set health to maxHealth
+        cout << "Your health has been fully restored!" << endl;
+    }
+};
+
+class Enemy {
+public:
+    string name;
+    int health;
+    int attack;
+    int defense;
+    int xpReward;
+
+    // Constructor with defense parameter and XP reward
+    Enemy(string n, int h, int a, int def = 5, int xp = 50)
+        : name(n), health(h), attack(a), defense(def), xpReward(xp) {}
+
+    void displayStats() {
+        cout << "Name: " << name << endl;
+        cout << "Health: " << health << endl;
+        cout << "Attack: " << attack << endl;
+    }
+
+    // Reset the enemy's health for a new combat
+    void resetHealth() {
+        health = 50;  // Set this to the initial health of the enemy
+    }
+    
+    bool dropsHealthPotion() {
+    	int chance = rand() % 10;
+    	return (chance == 0);
+	}
+};
+
+
+class HealthPotion {
+public:
+    int strength;
+    int amount;
+
+    HealthPotion(int str = 25, int amt = 3) : strength(str), amount(amt) {}
+
+    void UseHealthPotion(Player& player) {
+        if (amount > 0) {
+            char choice;
+            cout << "Are you sure you'd like to use a health potion? You have " << amount << " remaining." << endl;
+            cout << "(Y/N): ";
+            cin >> choice;
+
+            // Check if input is valid
+            if (choice == 'y' || choice == 'Y') {
+                player.health += strength;
+                cout << "Potion used: you restored " << strength << " health!" << endl;
+                if (player.health > player.maxHealth) {
+                    player.health = player.maxHealth;  // Cap health to maxHealth
+                }
+                amount--;  // Decrease potion amount
+                cout << "You have " << amount << " potions remaining." << endl;
+            } else {
+                cout << "Potion use canceled." << endl;
+            }
+        } else {
+            cout << "Not enough potions!" << endl;
+        }
+    }  
+};
+
+void displayCombatScreen(const Player& player, const Enemy& enemy) {
+	system("cls");
+	cout << "=========================================" << endl;
+    cout << "         YOU ENCOUNTERED AN ENEMY            " << endl;
+    cout << "=========================================" << endl;
+    cout << "Player: " << player.name << " | Health: " << player.health << " / " << player.maxHealth << endl;
+    cout << "Enemy: " << enemy.name << " | Health: " << enemy.health << endl;
+    cout << "=========================================" << endl;
+    cout << "1. Attack   2. Use Health Potion   3. Defend   4. Flee" << endl;
+    cout << "=========================================" << endl;
+    cout << "Choose your action: ";
+}
+
+void combat(Player& player, Enemy& enemy, HealthPotion& healthPotion) {
+	displayCombatScreen(player, enemy);
+    bool combatRunning = true;
+    bool defending = false;  // Declare defending outside the loop
+    int damageTaken = 0;     // Declare damageTaken outside the loop
+
+    cout << "You encounter a(n) " << enemy.name << endl;
+
+    while (combatRunning && player.health > 0 && enemy.health > 0) {
+        int action;
+        cout << "What would you like to do?" << endl;
+        cout << "1. Attack the " << enemy.name << endl;
+        cout << "2. Use a health potion" << endl;
+        cout << "3. Defend against the next attack" << endl;
+        cout << "4. Flee" << endl;
+        cin >> action;
+
+        switch (action) {
+            case 1: {
+            	displayCombatScreen(player, enemy);
+                cout << "You attack the " << enemy.name << endl;
+                enemy.health -= player.attack;
+                cout << "The enemy has " << enemy.health << " health remaining." << endl;
+
+                if (enemy.health <= 0) {
+                    cout << enemy.name << " has been defeated!" << endl;
+                    player.earnXP(enemy.xpReward); // Award XP to player
+
+                    if (enemy.dropsHealthPotion()) {
+                        cout << "The enemy has dropped a Health Potion!" << endl;
+                        healthPotion.amount++;
+                    }
+
+                    combatRunning = false;  // Exit combat
+                }
+                break;
+            }
+
+            case 2: {
+                char choice;
+                cout << "Would you like to use a health potion? (Y/N)" << endl;
+                cin >> choice;
+
+                if (choice == 'y' || choice == 'Y') {
+                    healthPotion.UseHealthPotion(player);
+                } else {
+                    cout << "Potion use canceled." << endl;
+                }
+                break;
+            }
+
+            case 3: {
+                cout << "You raise your defenses in anticipation of the next attack!" << endl;
+                defending = true;  // Set defending to true
+                break;
+            }
+
+            case 4: {
+                cout << "You flee the battle!" << endl;
+                combatRunning = false;  // Exit combat
+                break;
+            }
+
+            default:
+                cout << "Invalid choice. Try again." << endl;
+                break;
+        }
+
+        // Enemy's turn
+        if (combatRunning && enemy.health > 0) {
+        	
+        	int enemyAttackDamage = rand() % 21 + 10;
+        	
+            cout << enemy.name << " attacks you!" << endl;
+
+            if (defending) {
+                damageTaken = max(0, enemyAttackDamage - player.defense);  // Prevent negative damage
+                player.health -= damageTaken;
+                cout << "You blocked the incoming damage by " << player.defense << " points!" << endl;
+                cout << "You took " << damageTaken << " damage!" << endl;
+                defending = false;  // Reset defending after the attack
+            } else {
+                player.health -= enemyAttackDamage;
+                cout << "You took " << enemyAttackDamage << " damage!" << endl;
+                cout << "You have " << player.health << " health remaning!" << endl;
+            }
+
+            if (player.health <= 0) {
+                cout << "YOU DIED!" << endl;
+                combatRunning = false;  // Exit combat
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+// Main function
+int main() {
+    srand(time(0));
+
+    // Player creation
+    string name, characterClass;
+    cout << "What is your name?" << endl;
+    getline(cin, name);  // Corrected to getline
+    cout << "Choose your class (Warrior, Mage, Ranger)" << endl;
+    getline(cin, characterClass);  // Corrected to getline
+
+    Player player(name, characterClass);
+
+    // Create HealthPotion object
+    HealthPotion healthPotion(25, 3);  // Restores 25 health, 3 potions available
+
+    cout << "\nWelcome to the RPG, " << player.name << "!\n" << endl;
+
+    // Corrected Enemy object initialization
+    Enemy goblin("Goblin", 50, 8);
+
+    // Menu loop
+    bool gameRunning = true;
+    while (gameRunning) {
+        // Display menu options
+        cout << "\nMenu Options:" << endl;
+        cout << "1. View Player Stats" << endl;
+        cout << "2. Start Combat" << endl;
+        cout << "3. Use Health Potion" << endl;
+        cout << "4. Quit Game" << endl;
+        cout << "Choose an option (1-4): ";
+
+        int choice;
+        cin >> choice;
+
+        // Clear the input buffer to avoid leftover characters
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+        switch (choice) {
+            case 1:
+                player.displayStats();  // View stats
+                break;
+            case 2:
+                player.resetHealth();  // Reset health before each combat
+                goblin.resetHealth();  // Reset enemy health before combat
+                combat(player, goblin, healthPotion);  // Start combat
+                break;
+            case 3:
+                healthPotion.UseHealthPotion(player);  // Use health potion
+                break;
+            case 4:
+                cout << "Quitting the game..." << endl;  // Quit the game
+                gameRunning = false;
+                break;
+            default:
+                cout << "Invalid choice. Please choose again." << endl;  // Handle invalid input
+        }
+    }
+
+    cout << "GAME OVER" << endl;
+    return 0;
+}
